@@ -62,4 +62,12 @@ class YahooQuotes(models.Model):
   
   updateTime = models.DateTimeField(auto_now_add=True)
   
-  
+  def to_json(self):
+    data = {}
+    data['symbol'] = self.symbol
+    data['name'] = self.name
+    data['earningPerShare'] = self.earningPerShare
+    data['revenue'] = self.revenue
+    data['EBITDA'] = self.EBITDA
+    data['previousClose'] = self.previousClose
+    return data 
