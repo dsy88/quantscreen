@@ -19,5 +19,5 @@ import quantscreen
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^rank/', include('quantscreen.rank.urls'))
+    url(r'^rank/', include('rank.urls'))
 ]
