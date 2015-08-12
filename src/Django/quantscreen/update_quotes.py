@@ -6,18 +6,21 @@ import sys
 import re
 import time
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "quantscreen.settings") 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "quantscreen.local_settings") 
 import django
 django.setup()
-from stockquotes.models import YahooQuotes
+from stock.models import YahooQuotes
 
 YAHOO_URL = "http://finance.yahoo.com/d/quotes.csv"
 
 def post(url, params):
   data = urllib.urlencode(params)
+  print url, data
   response = urllib2.urlopen("%s?%s" % (url, data))
   #response = urllib2.urlopen("http://finance.yahoo.com/d/quotes.csv?s=TRUE&f=anp")
-  return response.read()
+  content = response.read()
+  response.close()
+  return content
 
 def expandMillion(val):
   if type(val) is not type('str'):
@@ -92,6 +95,7 @@ def fetch(path, market):
     parse(symbols)
     symbols = []
     count = 0
+    time.sleep(5)
   
   if symbols:
     parse(symbols)

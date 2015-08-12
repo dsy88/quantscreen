@@ -1,5 +1,40 @@
 from django.db import models
 # Create your models here.
+
+class StockMeta(models.Model):
+  symbol = models.CharField(max_length=100)
+  name = models.CharField(max_length=500)
+  market = models.CharField(max_length=100)
+  IPOYear = models.CharField(max_length=10)
+  sector = models.CharField(max_length=100)
+  industry = models.CharField(max_length=100)
+  summaryQuote = models.URLField()
+  
+class FinancialReport(models.Model):
+  
+  stock = models.ForeignKey(StockMeta, related_name="report")
+  endDate = models.DateField(null=True)
+  amend = models.BooleanField()
+  periodFocus = models.CharField(max_length=10)
+  fiscalYear = models.CharField(max_length=10)
+  #10-K, 10-Q
+  docType = models.CharField(max_length=10)
+  revenues = models.FloatField()
+  opIncome = models.FloatField()
+  netIncome = models.FloatField()
+  epsBasic = models.FloatField()
+  epsDiluted = models.FloatField()
+  dividend = models.FloatField()
+  assets = models.FloatField()
+  curAssets = models.FloatField()
+  curLiab = models.FloatField()
+  cash = models.FloatField()
+  equity = models.FloatField()
+  cashFlowOp = models.FloatField()
+  cashFlowInv = models.FloatField()
+  cashFlowFin = models.FloatField()
+  
+  
 class YahooQuotes(models.Model):
   #Price
   ask = models.FloatField(null=True)

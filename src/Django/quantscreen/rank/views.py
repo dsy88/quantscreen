@@ -1,7 +1,7 @@
-from stockquotes import models
+from stock import models
 from django.http.response import JsonResponse
 from django.views.generic import View
-from stockquotes.models import YahooQuotes
+from stock.models import YahooQuotes
 
 class TopView(View):
   def get(self, request):
@@ -13,3 +13,5 @@ class TopView(View):
     
     ret['top'] = [stock.to_json() for stock in top]   
     return JsonResponse(ret)
+  
+  
