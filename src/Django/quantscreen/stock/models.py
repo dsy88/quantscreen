@@ -1,6 +1,11 @@
 from django.db import models
 # Create your models here.
 
+class Treasuries(models.Model):
+  date = models.DateTimeField()
+  type = models.CharField(max_length=50)
+  yields = models.FloatField()
+   
 class StockMeta(models.Model):
   symbol = models.CharField(max_length=100)
   name = models.CharField(max_length=500)
@@ -10,29 +15,35 @@ class StockMeta(models.Model):
   industry = models.CharField(max_length=100)
   summaryQuote = models.URLField()
   
+  updateTime = models.DateTimeField(auto_now_add=True)
+  
+  
 class FinancialReport(models.Model):
   
-  stock = models.ForeignKey(StockMeta, related_name="report")
+  symbol = models.CharField(max_length=100)
   endDate = models.DateField(null=True)
   amend = models.BooleanField()
   periodFocus = models.CharField(max_length=10)
   fiscalYear = models.CharField(max_length=10)
   #10-K, 10-Q
   docType = models.CharField(max_length=10)
-  revenues = models.FloatField()
-  opIncome = models.FloatField()
-  netIncome = models.FloatField()
-  epsBasic = models.FloatField()
-  epsDiluted = models.FloatField()
-  dividend = models.FloatField()
-  assets = models.FloatField()
-  curAssets = models.FloatField()
-  curLiab = models.FloatField()
-  cash = models.FloatField()
-  equity = models.FloatField()
-  cashFlowOp = models.FloatField()
-  cashFlowInv = models.FloatField()
-  cashFlowFin = models.FloatField()
+  revenues = models.FloatField(null=True)
+  opIncome = models.FloatField(null=True)
+  netIncome = models.FloatField(null=True)
+  epsBasic = models.FloatField(null=True)
+  epsDiluted = models.FloatField(null=True)
+  dividend = models.FloatField(null=True)
+  assets = models.FloatField(null=True)
+  curAssets = models.FloatField(null=True)
+  curLiab = models.FloatField(null=True)
+  cash = models.FloatField(null=True)
+  equity = models.FloatField(null=True)
+  cashFlowOp = models.FloatField(null=True)
+  cashFlowInv = models.FloatField(null=True)
+  cashFlowFin = models.FloatField(null=True)
+  
+  updateTime = models.DateTimeField(auto_now_add=True)
+  
   
   
 class YahooQuotes(models.Model):

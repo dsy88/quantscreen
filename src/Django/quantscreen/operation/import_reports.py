@@ -1,3 +1,5 @@
+import django
+django.setup()
 import pandas
 from datetime import datetime
 import urllib, urllib2
@@ -5,17 +7,14 @@ from io import StringIO
 import sys
 import re
 import time
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "quantscreen.local_settings") 
-import django
-django.setup()
 from stock.models import *
 
 def import_report(path):
   data = pandas.read_csv(path, index_col=0)
   for symbol, row in data.iterrows():
     symbol = symbol
-    if FinancialReport.objects.filter(fiscalYear=row['fiscal_year'], periodFocus=row['period_focus']).exists():
+    if FinancialReport.objects.filter(symbol=symbol, fiscalYear=row['fiscal_year'],\
+                                      periodFocus=row['period_focus']).exists():
       print symbol, "exist"
       continue
     try:
@@ -24,7 +23,8 @@ def import_report(path):
       print symbol
       continue
     
-    report = FinancialReport(stock=stock)
+    report = FinancialReport()
+    report.symbol = symbol
     report.endDate = row['end_date']
     report.amend = row['amend']
     report.periodFocus = row['period_focus'].strip()
@@ -44,6 +44,7 @@ def import_report(path):
     report.cashFlowOp = row['cash_flow_op']
     report.cashFlowInv = row['cash_flow_inv']
     report.cashFlowFin = row['cash_flow_fin']
+    report.save()
 
 if __name__ == "__main__":
   django.setup()

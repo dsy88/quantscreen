@@ -5,11 +5,10 @@ from io import StringIO
 import sys
 import re
 import time
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "quantscreen.local_settings") 
 import django
 django.setup()
 from stock.models import StockMeta
+from rank.models import PERank
 
 def import_meta(path, market):
   data = pandas.read_csv(path, index_col=0)

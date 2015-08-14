@@ -37,7 +37,9 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'stock'
+    'stock',
+    'rank',
+    'operation'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -71,6 +73,39 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'quantscreen.wsgi.application'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+       'standard': {
+            'format': '%(asctime)s [%(threadName)s:%(thread)d] [%(name)s:%(lineno)d] [%(module)s:%(funcName)s] [%(levelname)s]- %(message)s'} 
+    },
+    'filters': {
+    },
+    'handlers': {
+        'default': {
+            'level':'DEBUG',
+            'class':'logging.handlers.RotatingFileHandler',
+            'filename': 'logs/quantscreen.log',     
+            'maxBytes': 1024*1024*5,                 
+            'backupCount': 5,                         
+            'formatter':'standard',
+        },
+        'console':{
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard'
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['default', 'console'],
+            'level': 'WARN',
+            'propagate': False 
+        }
+    } 
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
@@ -87,6 +122,7 @@ DATABASES = {
         #'PORT': '5432'
     }
 }
+
 
 
 # Internationalization
