@@ -3,7 +3,7 @@ from quantscreen.helper import json_response
 from quantscreen.helper import BaseView
 from django.utils.decorators import method_decorator
 from stock.models import YahooQuotes, StockMeta
-from rank.models import PEGRank
+from rank.models import PEGRank, DividendRank
 from datetime import datetime, timedelta
 
 class TopView(BaseView):
@@ -27,7 +27,9 @@ class PERankView(BaseView):
     dates = PEGRank.objects.dates('updateTime', 'day', order='DESC').distinct()
     
     for date in dates:
-      top = PEGRank.objects.filter(updateTime=str(date), rate__isnull=False, rate__gt=0).order_by('rate')[:30]
+      top = PEGRank.objects.filter(updateTime=str(date), \
+                                   rate__isnull=False, rate__gt=0).\
+                            order_by('rate')[:1]
       
       if len(top) > 0:
         break
@@ -35,3 +37,20 @@ class PERankView(BaseView):
     self.ret['top'] = [rank.to_json() for rank in top]
     return self.ret
   
+class DividendView(BaseView):
+  @method_decorator(json_response)
+  def get(self, request):
+    page = request.GET.get('page', 0)
+    
+    dates = PEGRank.objects.dates('updateTime', 'day', order='DESC').distinct()
+    
+    for date in dates:
+      top = DividendRank.objects.filter(updateTime=str(date), \
+                                   rate__isnull=False, rate__gt=0).\
+                            unique().order_by('rate')[:30]
+      
+      if len(top) > 0:
+        break
+      
+    self.ret['top'] = [rank.to_json() for rank in top]
+    return self.ret

@@ -1,8 +1,9 @@
 from django.db import models
 from stock.models import StockMeta
 from django.db.models.lookups import StartsWith
+from quantscreen.helper import JsonMethod
 
-class PEGRank(models.Model):
+class PEGRank(models.Model, JsonMethod):
   stock = models.ForeignKey(StockMeta, 
                                related_name='PEGRank')
   rate = models.FloatField(null=True)
@@ -21,8 +22,10 @@ class PEGRank(models.Model):
   revenueQuarterGrowth = models.FloatField(null=True)
   revenueAnnualGrowth= models.FloatField(null=True)
   
-  assetQuarterGrowth = models.FloatField(null=True)
-  assetAnnualGrowth = models.FloatField(null=True)
+  EBIDTQuarterGrowthStd = models.FloatField(null=True)
+  EBIDTAnnualGrowthStd = models.FloatField(null=True)
+  EBIDTQuarterGrowth = models.FloatField(null=True)
+  EBIDTAnnualGrowth = models.FloatField(null=True)
   
   PEGNextQuarter = models.FloatField(null=True)
   PEGNextAnnual = models.FloatField(null=True)
@@ -31,17 +34,16 @@ class PEGRank(models.Model):
   AnnualTargePrice = models.FloatField(null=True)
   
   updateTime = models.DateField(auto_now_add=True)
+  
+class DividendRank(models.Model, JsonMethod):
+  stock = models.ForeignKey(StockMeta, related_name='DividendRank')
+  
+  avgAnnualDividend = models.FloatField(null=True)
+  stdAnnualDividend = models.FloatField(null=True)
+  estAnnualReturn = models.FloatField(null=True)
+  
+  rate = models.FloatField(null=True)
+  updateTime = models.DateField(auto_now_add=True)
 
-  def to_json(self):
-    data = {}
-    data['symbol'] = self.stock.symbol
-    
-    for name in vars(self).keys():
-      if name == 'stock' or name.startswith('_'):
-        continue
-      if name == "updateTime":
-        data[name] = str(self.updateTime)
-        continue
-      data[name] = getattr(self, name)
-    return data
+  
   

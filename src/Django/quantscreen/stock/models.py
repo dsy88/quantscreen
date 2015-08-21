@@ -1,4 +1,5 @@
 from django.db import models
+from quantscreen.helper import JsonMethod
 # Create your models here.
 
 class Treasuries(models.Model):
@@ -6,7 +7,7 @@ class Treasuries(models.Model):
   type = models.CharField(max_length=50)
   yields = models.FloatField()
    
-class StockMeta(models.Model):
+class StockMeta(models.Model, JsonMethod):
   symbol = models.CharField(max_length=100)
   name = models.CharField(max_length=500)
   market = models.CharField(max_length=100)
@@ -19,7 +20,6 @@ class StockMeta(models.Model):
   
   
 class FinancialReport(models.Model):
-  
   symbol = models.CharField(max_length=100)
   endDate = models.DateField(null=True)
   amend = models.BooleanField()
@@ -43,8 +43,6 @@ class FinancialReport(models.Model):
   cashFlowFin = models.FloatField(null=True)
   
   updateTime = models.DateTimeField(auto_now_add=True)
-  
-  
   
 class YahooQuotes(models.Model):
   #Price
