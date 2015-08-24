@@ -1,0 +1,53 @@
+{
+  "name": "quantscreen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "gulpfile.js",
+  "dependencies": {
+    "browserify": "^11.0.1",
+    "gulp-streamify": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0",
+    "reactify": "^1.1.1",
+    "watchify": "^3.3.1"
+  },
+  "devDependencies": {
+    "bootstrap": "^3.3.5",
+    "browserify": "^11.0.1",
+    "event": "^1.0.0",
+    "flux": "^2.1.1",
+    "gulp": "^3.9.0",
+    "gulp-concat": "^2.6.0",
+    "gulp-html-replace": "^1.5.1",
+    "gulp-less": "^3.0.3",
+    "gulp-react": "^3.0.1",
+    "gulp-run": "^1.6.10",
+    "gulp-streamify": "^1.0.0",
+    "gulp-uglify": "^1.2.0",
+    "i18next": "^1.10.4",
+    "object-assign": "^4.0.1",
+    "react": "^0.13.3",
+    "react-bootstrap": "^0.24.5",
+    "react-router": "^0.13.3",
+    "react-router-bootstrap": "^0.18.1",
+    "reactify": "^1.1.1",
+    "vinyl-source-stream": "^1.1.0",
+    "watchify": "^3.3.1"
+  },
+  "paths": {
+    "less": "assets/less/*.less",
+    "js": "./app/**/*.js",
+    "jsx": "./app/**/*.jsx",
+    "app": "./app/quantscreen.js",
+    "html": "*.html"
+  },
+  "dest": {
+    "style": "style.css",
+    "app": "app.js",
+    "dist": "dist"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "sunyu",
+  "license": "ISC"
+}

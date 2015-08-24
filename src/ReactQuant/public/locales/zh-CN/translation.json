@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "QuantScreen"
+  },
+  "nav": {
+    "home": "主页",
+    "rank": "排行榜",
+    "tools": "工具",
+    "donation": "赞助",
+    "about": "关于",
+    "lang": "语言",
+    "lang-en-US": "英语(美国)",
+    "lang-zh-CN": "简体中文"
+  }
+}

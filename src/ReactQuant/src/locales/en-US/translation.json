@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "QuantScreen"
+  },
+  "nav": {
+    "home": "Home",
+    "rank": "Rank",
+    "tools": "Tools",
+    "donation": "Donation",
+    "about": "About",
+    "lang": "Language",
+    "lang-en-US": "English(US)",
+    "lang-zh-CN": "Chinese(Simplified)"
+  }
+}
