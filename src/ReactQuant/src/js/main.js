@@ -16,6 +16,10 @@ var ReactBootstrap = require('react-bootstrap')
   , Row = ReactBootstrap.Row
   , Col = ReactBootstrap.Col
   , Grid = ReactBootstrap.Grid
+  , Table = ReactBootstrap.Table
+  , Panel = ReactBootstrap.Panel
+  , TabbedArea = ReactBootstrap.TabbedArea
+  , TabPane = ReactBootstrap.TabPane
   ;
 
 var ReactRouterBootstrap = require('react-router-bootstrap')
@@ -28,7 +32,9 @@ var ReactRouterBootstrap = require('react-router-bootstrap')
   ;
 
 var AppStore = require('./stores/AppStore');
+var PEGRankStore = require('./stores/PEGRankStore');
 var UpdateActions = require('./actions/UpdateActions');
+var RankList = require('./components/RankList');
 
 var supportedLang = ["en-US", "zh-CN"];
 
@@ -44,7 +50,7 @@ var App = React.createClass({
   // Invoked once after the first render
   getInitialState: function(){
     return {
-      t: i18n.t
+      t: i18n.t,
     }
   },
   handleChangeLanguage: function(selectedKey) {
@@ -83,23 +89,9 @@ var App = React.createClass({
 
         <Grid>
           <Row>
-            <Col xs={12} md={8}>
-              <Jumbotron>
-                <h1>Hello, world!</h1>
-                <p>This is a simple hero unit, a simple jumbotron-style component for
-                calling extra attention to featured content or information.</p>
-                <p>
-                  <Button bsStyle="primary">Learn more</Button>
-                </p>
-              </Jumbotron>
-
-              <Table responsive>
-              <thead>
-              </thead>
-              </Table>
+              <RankList t={this.state.t} store={PEGRankStore} />
 
               <RouteHandler/>
-            </Col>
           </Row>
         </Grid>
 

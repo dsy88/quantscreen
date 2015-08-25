@@ -7,6 +7,7 @@ var AppConstants = require('../constants/AppConstants');
 var APPCHANGE_EVENT = "APPCHANGE";
 
 var _t = i18n.t;
+var _state = AppConstants.ajax.AJAX_SUCCEED;
 
 var AppStore = objectAssign({}, EventEmitter.prototype, {
   addChangeListener: function(cb){
@@ -27,6 +28,9 @@ AppDispatcher.register(function(payload){
     	_t = payload.response;
     	AppStore.emit(APPCHANGE_EVENT);
     	break;
+    case AppConstants.app.AJAX_REQUEST:
+      _state = payload.state;
+      AppStore.emit(APPCHANGE_EVENT);
     default:
       return true;
   }
