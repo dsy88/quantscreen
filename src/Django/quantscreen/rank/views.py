@@ -12,10 +12,14 @@ class TopView(BaseView):
     print request
     page = request.GET.get('page', 0)
     
-    top = YahooQuotes.objects.order_by('-earningPerShare', \
+    q = YahooQuotes.objects.order_by('-earningPerShare', \
                                        '-EPSEstimateCurrentYear')[:30]
+    total = len(q)
+    top = q[:30]
     
-    self.ret['top'] = [stock.to_json() for stock in top]   
+    self.ret['top'] = [stock.to_json() for stock in top]
+    self.ret['page'] = page
+    self.ret['total'] = total   
     return self.ret
   
 
@@ -27,14 +31,17 @@ class PERankView(BaseView):
     dates = PEGRank.objects.dates('updateTime', 'day', order='DESC').distinct()
     
     for date in dates:
-      top = PEGRank.objects.filter(updateTime=str(date), \
+      q = PEGRank.objects.filter(updateTime=str(date), \
                                    rate__isnull=False, rate__gt=0).\
-                            order_by('rate')[:1]
-      
+                            order_by('rate')
+      total = len(q)
+      top = q[:30]
       if len(top) > 0:
         break
-      
+    
     self.ret['top'] = [rank.to_json() for rank in top]
+    self.ret['page'] = page
+    self.ret['total'] = total
     return self.ret
   
 class DividendView(BaseView):
@@ -45,12 +52,16 @@ class DividendView(BaseView):
     dates = PEGRank.objects.dates('updateTime', 'day', order='DESC').distinct()
     
     for date in dates:
-      top = DividendRank.objects.filter(updateTime=str(date), \
+      q = DividendRank.objects.filter(updateTime=str(date), \
                                    rate__isnull=False, rate__gt=0).\
                             unique().order_by('rate')[:30]
+      total = len(q)
+      top = q[:30]
       
       if len(top) > 0:
         break
       
     self.ret['top'] = [rank.to_json() for rank in top]
+    self.ret['page'] = page
+    self.ret['total'] = total
     return self.ret
