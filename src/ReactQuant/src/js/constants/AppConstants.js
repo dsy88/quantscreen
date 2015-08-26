@@ -1,19 +1,20 @@
 var AppConstants = {
-  app: {
-    AJAX_REQUEST: "AJAX_REQUEST"
+  APP: {
+
   },
-  ajax: {
+  AJAX: {
+    AJAX_REQUEST: "AJAX_REQUEST",
     AJAX_PENDING: "AJAX_PENDING",
     AJAX_FAILED: "AJAX_FAILED",
     AJAX_SUCCEED: "AJAX_SUCCEED"
   },
-  rank: {
-
+  RANK: {
+    PEG_COLUMNS : ['rank', 'symbol', 'currentPrice', 'averageQuarterGrowth', 'averageAnnualGrowth','estNextYearPE', 'rate']
   },
-  actions: {
+  ACTIONS: {
     CHANGE_LANGUAGE: "CHANGE_LANGUAGE",
     UPDATE_PEGRANK: "UPDATE_PEGRANK"
-  }
+  },
 };
 
 module.exports = AppConstants;

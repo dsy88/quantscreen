@@ -7,7 +7,7 @@ var AppConstants = require('../constants/AppConstants');
 var APPCHANGE_EVENT = "APPCHANGE";
 
 var _t = i18n.t;
-var _state = AppConstants.ajax.AJAX_SUCCEED;
+var _state = AppConstants.AJAX.AJAX_SUCCEED;
 
 var AppStore = objectAssign({}, EventEmitter.prototype, {
   addChangeListener: function(cb){
@@ -24,11 +24,11 @@ var AppStore = objectAssign({}, EventEmitter.prototype, {
 AppDispatcher.register(function(payload){
   var action = payload.action;
   switch(action){
-    case AppConstants.actions.CHANGE_LANGUAGE:
+    case AppConstants.ACTIONS.CHANGE_LANGUAGE:
     	_t = payload.response;
     	AppStore.emit(APPCHANGE_EVENT);
     	break;
-    case AppConstants.app.AJAX_REQUEST:
+    case AppConstants.AJAX.AJAX_REQUEST:
       _state = payload.state;
       AppStore.emit(APPCHANGE_EVENT);
     default:

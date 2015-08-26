@@ -11,5 +11,14 @@
     "lang": "语言",
     "lang-en-US": "英语(美国)",
     "lang-zh-CN": "简体中文"
+  },  
+  "colunms": {
+    "rank": "排名",
+    "symbol": "代码",
+    "currentPrice": "当前价格",
+    "rate": "评级",
+    "averageQuarterGrowth": "平均季度收入增长率",
+    "averageAnnualGrowth": "平均年度收入增长率",
+    "estNextYearPE": "明年PE预测"
   }
 }

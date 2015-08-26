@@ -11,5 +11,14 @@
     "lang": "Language",
     "lang-en-US": "English(US)",
     "lang-zh-CN": "Chinese(Simplified)"
+  }, 
+  "colunms": {
+    "rank": "Rank",
+    "symbol": "Symbol",
+    "currentPrice": "Current Price",
+    "rate": "Rate",
+    "averageQuarterGrowth": "Average Quarter Earning Growth",
+    "averageAnnualGrowth": "Average Annual Earning-Growth",
+    "estNextYearPE": "Estimated Next Year PE"
   }
 }

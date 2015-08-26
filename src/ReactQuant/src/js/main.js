@@ -59,6 +59,7 @@ var App = React.createClass({
   },
   componentDidMount: function() {
     AppStore.addChangeListener(this._onChange);
+    UpdateActions.updatePEGRank();
   },
   componentWillUnmount: function() {
     AppStore.removeChangeListener(this._onChange);

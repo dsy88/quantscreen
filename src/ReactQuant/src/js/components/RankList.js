@@ -28,7 +28,7 @@ var RankList = React.createClass({
   getInitialState: function(){
     return {
       selectedRow: -1,
-      columns: []
+      colunms: []
     }
   },
   getDefaultProps: function(){
@@ -53,7 +53,7 @@ var RankList = React.createClass({
     }
   },
   render: function() {
-    var col = this.state.columns.map(function(column){
+    var col = this.state.colunms.map(function(column){
             return <th>{this.props.t(column)}</th>;
           }.bind(this)); 
     return (
