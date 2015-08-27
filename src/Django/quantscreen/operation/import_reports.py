@@ -28,7 +28,7 @@ def import_report(path):
     report.endDate = row['end_date']
     report.amend = row['amend']
     report.periodFocus = row['period_focus'].strip()
-    report.fiscalYear = row['fiscal_year'].strip()
+    report.fiscalYear = row['fiscal_year']
     report.docType = row['doc_type'].strip()
     report.revenues = row['revenues']
     report.opIncome = row['op_income']
