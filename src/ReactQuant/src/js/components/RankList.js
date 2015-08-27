@@ -28,13 +28,15 @@ var RankList = React.createClass({
   getInitialState: function(){
     return {
       selectedRow: -1,
-      colunms: []
+      currentPage: -1,
+      colunms: [],
+      top: null
     }
   },
   getDefaultProps: function(){
     return {
       t: null,
-      store: null
+      store: null,
     }
   },
   componentDidMount: function() {
@@ -55,7 +57,25 @@ var RankList = React.createClass({
   render: function() {
     var col = this.state.colunms.map(function(column){
             return <th>{this.props.t(column)}</th>;
+          }.bind(this));
+    if (this.state.top != null) {
+      if (this.state.currentPage != -1 && this.state.top[this.state.currentPage] != null) {
+        var rows = this.state.top[this.state.currentPage].map(function(data, index){
+              return (
+                <tr>
+                  <td>{index}</td>
+                  <td>{data.stock.symbol}</td>
+                  //<td>{data.price}</td>
+                  <td>{data.epsQuarterGrowth}</td>
+                  <td>{data.epsAnnualGrowth}</td>
+                  <td>{data.nextYearPE}</td>
+                  <td>{data.rate}</td>
+                </tr>
+                );
           }.bind(this)); 
+        console.log(rows);
+      }
+    }
     return (
       <Table responsive>
         <thead>
@@ -63,6 +83,9 @@ var RankList = React.createClass({
             {col}
           </tr>
         </thead>
+        <tbody>
+            {rows}
+        </tbody>
       </Table>
     );
   }

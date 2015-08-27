@@ -26,7 +26,8 @@ var PEGRankStore = objectAssign({}, EventEmitter.prototype, {
   },
   getState: function(){
     return {colunms: _colunms,
-            top: _top};
+            top: _top,
+            currentPage: _currentPage};
   },
 });
 
@@ -36,7 +37,7 @@ AppDispatcher.register(function(payload){
     case AppConstants.ACTIONS.UPDATE_PEGRANK:
       var response = payload.response;
       if (response.status == "OK") {
-        _top[response.page] = response.data;
+        _top[response.page] = response.top;
         _total = response.total;
         _currentPage = response.page;
         PEGRankStore.emit(PEGRANKCHANGE_EVENT); 
