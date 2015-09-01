@@ -1,11 +1,13 @@
 import django
+import os
+os.environ["DJANGO_SETTINGS_MODULE"] = "quantscreen.local_settings"
 django.setup()
 from rank.models import PEGRank, DividendRank
 from django.utils.decorators import method_decorator
 from stock.models import StockMeta, FinancialReport, YahooQuotes, Treasuries
 import logging
 import numpy
-from datetime import datetime
+from datetime import datetime, date
 from django.views.decorators.csrf import csrf_exempt
 import time
 
@@ -36,7 +38,7 @@ def quarterPEG(stock, rank, preClose):
   rank.currentQuarterPE = preClose/currentEPS
   
   #if eps is negative then pe means nothing use op-income(EBITDA) to replace earning
-  if rank.currentAnnualPE > 0:
+  if rank.currentQuarterPE > 0:
     epsDiluted = [report.epsDiluted for report in reports if report.epsDiluted]
     diff = numpy.diff(epsDiluted)
     epsDiluted = epsDiluted[1:]
@@ -48,7 +50,7 @@ def quarterPEG(stock, rank, preClose):
     #Try use EBIDT to calculate the growth
     #Usually these kind of company a fast growing companies
     #Investors are betting on the future otherwise they won't succeed in IPO 
-    EBITDAs = [report.op_income for report in reports if report.op_income]
+    EBITDAs = [report.opIncome for report in reports if report.opIncome]
     diff = numpy.diff(EBITDAs)
     EBITDAs = EBITDAs[1:]
     growth = numpy.divide(diff, EBITDAs)
@@ -58,6 +60,13 @@ def quarterPEG(stock, rank, preClose):
   #average
   rank.epsQuarterGrowth = avgGrowth
   rank.epsQuarterGrowthStd = numpy.std(growth)
+  #negative growth measn PEG does not apply here
+  
+  #for those stock has high fluctuation rate, PEG does not apply
+  if rank.epsQuarterGrowthStd > 1.0 or avgGrowth <= 0:
+    rank.nextQuaterPE = None
+    rank.PEGNextQuarter = None
+    return
   rank.nextQuaterPE = rank.currentQuarterPE / (1.0 + avgGrowth);
   rank.PEGNextQuarter = rank.nextQuaterPE / rank.epsQuarterGrowth
   return
@@ -97,14 +106,22 @@ def annualPEG(stock, rank, preClose):
     #Try use EBIDT to calculate the growth
     #Usually these kind of company a fast growing companies
     #Investors are betting on the future otherwise they won't succeed in IPO 
-    EBITDAs = [report.op_income for report in reports if report.op_income]
+    EBITDAs = [report.opIncome for report in reports if report.opIncome]
     diff = numpy.diff(EBITDAs)
     EBITDAs = EBITDAs[1:]
     growth = numpy.divide(diff, EBITDAs)
     avgGrowth = numpy.average(growth)
-  
+
   rank.epsAnnualGrowth = avgGrowth
   rank.epsAnnualGrowthStd = numpy.std(growth)
+  
+  #for those stock has high fluctuation rate, PEG does not apply
+  #negative growth measn PEG does not apply here
+  if rank.epsAnnualGrowth > 1.0 or avgGrowth <= 0:
+    rank.nextYearPE = None
+    rank.PEGNextAnnual = None
+    return
+  
   rank.nextYearPE = rank.currentAnnualPE / (1.0 + avgGrowth)
   rank.PEGNextAnnual = rank.nextYearPE / rank.epsAnnualGrowth;
   return
@@ -119,14 +136,18 @@ def updatePEGRank(stock):
         preClose = quote.previousClose
         break
     if preClose is None:
-      continue
+      return
   else:
     #No Yahoo Quotes found for this symbol
     log.warning("no Yahoo quotes found for %s" % stock.symbol)
-    continue
+    return
 
-  rank = PEGRank(stock=stock)
-  
+  try:
+    rank = PEGRank.objects.get(updateTime=date.today(), stock__symbol=stock.symbol)
+  except:
+    print "Creating new PEGRank for %s" % stock.symbol
+    rank = PEGRank(stock=stock)
+    
   quarterPEG(stock, rank, preClose)
   annualPEG(stock, rank, preClose)
   
@@ -138,12 +159,10 @@ def updatePEGRank(stock):
   #1.Underpriced (low growth esitmate or irrational)
   #2.earning increase (slow market)
   
+  rank.rate = 0.0
+  
   if rank.PEGNextAnnual and rank.PEGNextQuarter:
     rank.rate = (rank.PEGNextAnnual + rank.PEGNextQuarter) / 2.0
-  elif rank.PEGNextAnnual:
-    rank.rate = rank.PEGNextAnnual
-  elif rank.PEGNextQuarter:
-    rank.rate = rank.PEGNextQuarter
   
   rank.save()   
   return 
@@ -158,18 +177,18 @@ def updateDividendRank(stock):
         preClose = quote.previousClose
         break
     if preClose is None:
-      continue
+      return
   else:
     #No Yahoo Quotes found for this symbol
     log.warning("no Yahoo quotes found for %s" % stock.symbol)
-    continue
-  
-  peg = PEGRank.objects.filter(stock=stock).order_by('updateTime')[:1]
-  if not peg:
-    log.warning("No PEGRank found for %s" % stock.symbol)
     return
   
-  rank = DividendRank(stock=stock)
+  try:
+    rank = DividendRank.objects.get(updateTime=date.today(), stock__symbol=stock.symbol)
+  except:
+    print "Creating new DividendRank for %s" % stock.symbol
+    rank = DividendRank(stock=stock)
+  
   reports = FinancialReport.objects.filter(symbol=stock.symbol,\
                                           docType='10-K').\
                                    order_by('-fiscalYear',\
@@ -202,24 +221,22 @@ def updateDividendRank(stock):
   
   #Overall return consist of two parts
   #1 Annual Dividend return
-  #2 Annual price growth £¨assuming PE keeps the same, price growth equal to eps growth)£©
-  rank.rate = rank.estAnnualReturn + peg.epsAnnualGrowth
+  #2 Annual price growth (assuming PE keeps the same, price growth equal to eps growth)
+  #Only use the first for now
+  rank.rate = rank.estAnnualReturn
   
   rank.save()
   return
 
 if __name__ == "__main__":
-  django.setup()
   current = time.time()
   
   benchmarkRate = Treasuries.objects.all().order_by('-date')[:1]
   if len(benchmarkRate) > 0:
     rate = benchmarkRate[0].yields
+    stopPE = 1.0 / rate
   else:
     log.warning("no treasuries data found")
-    return 
-  
-  stopPE = 1.0 / rate
   
   stocks = StockMeta.objects.all()
   for stock in stocks:

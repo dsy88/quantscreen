@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 class TopView(BaseView):
   @method_decorator(json_response)
   def get(self, request):
-    print request
     page = request.GET.get('page', 0)
     
     q = YahooQuotes.objects.order_by('-earningPerShare', \
@@ -32,8 +31,10 @@ class PERankView(BaseView):
     
     for date in dates:
       q = PEGRank.objects.filter(updateTime=str(date), \
-                                   rate__isnull=False, rate__gt=0).\
-                            order_by('rate')
+                                 rate__isnull=False, rate__gt=0,\
+                                 epsAnnualGrowth__gt=0.15,\
+                                 epsQuarterGrowth__gt=0.05).\
+                                   order_by('rate')
       total = len(q)
       top = q[:30]
       if len(top) > 0:
@@ -49,12 +50,12 @@ class DividendView(BaseView):
   def get(self, request):
     page = request.GET.get('page', 0)
     
-    dates = PEGRank.objects.dates('updateTime', 'day', order='DESC').distinct()
+    dates = DividendRank.objects.dates('updateTime', 'day', order='DESC').distinct()
     
     for date in dates:
       q = DividendRank.objects.filter(updateTime=str(date), \
-                                   rate__isnull=False, rate__gt=0).\
-                            unique().order_by('rate')[:30]
+                                      rate__isnull=False, rate__gt=0).\
+                                      order_by('-rate')[:30]
       total = len(q)
       top = q[:30]
       

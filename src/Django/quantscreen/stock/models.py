@@ -44,7 +44,7 @@ class FinancialReport(models.Model):
   
   updateTime = models.DateTimeField(auto_now_add=True)
   
-class YahooQuotes(models.Model):
+class YahooQuotes(models.Model, JsonMethod):
   #Price
   ask = models.FloatField(null=True)
   bid = models.FloatField(null=True)

@@ -19,5 +19,6 @@ import quantscreen
 
 urlpatterns = patterns('api',
     url(r'^admin/', include(admin.site.urls)),
-    url(r'rank/', include('rank.urls'))
+    url(r'rank/', include('rank.urls')),
+    url(r'stock/', include('stock.urls'))
 )
