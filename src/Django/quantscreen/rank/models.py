@@ -3,10 +3,10 @@ from stock.models import StockMeta
 from django.db.models.lookups import StartsWith
 from quantscreen.helper import JsonMethod
 
-class PEGRank(models.Model, JsonMethod):
+class Statistics(models.Model, JsonMethod):
   stock = models.ForeignKey(StockMeta, 
-                               related_name='PEGRank')
-  rate = models.FloatField(null=True)
+                               related_name='Statistics')
+  #Growth and PE
   currentAnnualPE = models.FloatField(null=True)
   currentQuarterPE = models.FloatField(null=True)
   nextQuaterPE = models.FloatField(null=True)
@@ -32,18 +32,34 @@ class PEGRank(models.Model, JsonMethod):
   
   QuarterTargetPrice = models.FloatField(null=True)
   AnnualTargePrice = models.FloatField(null=True)
-  
-  updateTime = models.DateField(auto_now_add=True)
-  
-class DividendRank(models.Model, JsonMethod):
-  stock = models.ForeignKey(StockMeta, related_name='DividendRank')
-  
+    
+  #Dividends
   avgAnnualDividend = models.FloatField(null=True)
   stdAnnualDividend = models.FloatField(null=True)
   estAnnualReturn = models.FloatField(null=True)
   
-  rate = models.FloatField(null=True)
+  #Returns
+  currentAnnualROIC = models.FloatField(null=True)
+  currentAnnualROA = models.FloatField(null=True)
+  
+  avgAnnualROIC = models.FloatField(null=True)
+  avgAnnualROA = models.FloatField(null=True)
+  
+  currentQuarterROIC = models.FloatField(null=True)
+  currentQuarterROA = models.FloatField(null=True)
+  
+  avgQuarterROIC = models.FloatField(null=True)
+  avgQuarterROA = models.FloatField(null=True)
+  
+  currentAnnualPS = models.FloatField(null=True)
+  avgAnnualPS = models.FloatField(null=True)
+  
+  enterpriseValue = models.FloatField(null=True)
+  
+  EVtoEBITDA = models.FloatField(null=True)
+  
   updateTime = models.DateField(auto_now_add=True)
+
 
   
   

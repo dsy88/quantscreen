@@ -2,7 +2,7 @@ import django
 import os
 os.environ["DJANGO_SETTINGS_MODULE"] = "quantscreen.local_settings"
 django.setup()
-from rank.models import PEGRank, DividendRank
+from rank.models import Statistics
 from django.utils.decorators import method_decorator
 from stock.models import StockMeta, FinancialReport, YahooQuotes, Treasuries
 import logging
@@ -13,7 +13,167 @@ import time
 
 log=logging.getLogger('django')
 
-def quarterPEG(stock, rank, preClose):
+def cleanDividends(dividends, preClose):
+  ret = []
+  for dividend in dividends:
+    #unreasonable dividend  
+    while dividend / preClose > 0.5:
+      dividend /= 10.0
+    ret.append(dividend)  
+  
+  return ret
+
+def calculateGrowth(reports, stat):
+  #if eps is negative then pe means nothing use op-income(EBITDA) to replace earning
+  if stat.currentAnnualPE > 0:
+    epsDiluted = [report.epsDiluted for report in reports if report.epsDiluted]
+    diff = numpy.diff(epsDiluted)
+    epsDiluted = epsDiluted[1:]
+    growth = numpy.divide(diff, epsDiluted)
+    #average eps growth rate during last 5 years
+
+  else:
+    #for those negative stocks has negative EPS or zero EPS
+    #Try use EBIDT to calculate the growth
+    #Usually these kind of company a fast growing companies
+    #Investors are betting on the future otherwise they won't succeed in IPO 
+    opIncomes = [report.opIncome for report in reports if report.opIncome]
+    diff = numpy.diff(opIncomes)
+    opIncomes = opIncomes[1:]
+    #TBD average Growth is not accurate for fast growing company
+    growth = numpy.divide(diff, opIncomes)
+    
+  avgGrowth = numpy.average(growth)
+  avgGrowthStd = numpy.std(growth)
+    
+  return (avgGrowth, avgGrowthStd)
+
+def calculateROIC(reports, stat):
+  incomes = [report.netIncome for report in reports if report.netIncome]
+  avgNetIncome = numpy.average(incomes)
+  Equities = [report.equity for report in reports if report.equity]
+  avgEquity = numpy.average(Equities)
+  liabs = [report.curLiab for report in reports if report.curLiab]
+  avgLiab = numpy.average(liabs)
+  curAssets = [report.curAssets for report in reports if report.curAssets]
+  avgCurAssets = numpy.average(curAssets)
+  
+  avgInvestedCapital = (avgEquity + avgLiab - avgCurAssets)
+  if avgInvestedCapital > 0:
+    return avgNetIncome / avgInvestedCapital
+  else:
+    return 0
+
+def calculateROA(reports, stat):
+  incomes = [report.netIncome for report in reports if report.netIncome]
+  avgNetIncome = numpy.average(incomes)
+  assets = [report.assets for report in reports if report.assets]
+  avgAssets = numpy.average(assets)
+  
+  return avgNetIncome / avgAssets
+  
+def UpdateAnnual(stock, quote, stat):
+  reports = FinancialReport.objects.filter(symbol=stock.symbol,\
+                                          docType='10-K').\
+                                   order_by('-fiscalYear',\
+                                            '-periodFocus')[:5]                                 
+  if len(reports) > 0:
+    currentEPS = None
+    for report in reports:
+      if report.epsDiluted is not None:
+        currentEPS = report.epsDiluted
+        break
+    #No historic quarterly EPS data available
+    if currentEPS is None or currentEPS == 0.0:
+      log.warning("No quarterly EPS found for %s" % stock.symbol)
+      return
+  else:
+    #No Annual Report found for this symbol
+    log.warning("No Annual Report found for %s" % stock.symbol)
+    return
+  
+  #High PE means:
+  #1.Overpriced (high growth estimate or irrational) 
+  #2.earning decline (slow market)
+  
+  #low PE means:
+  #1.Underpriced (low growth esitmate or irrational)
+  #2.earning increase (slow market)  
+  stat.currentAnnualPE = quote.previousClose / currentEPS
+  
+  (stat.epsAnnualGrowth, stat.epsAnnualGrowthStd) = calculateGrowth(reports, stat)
+  
+  #for those stock has high fluctuation rate, PEG does not apply
+  #negative growth measn PEG does not apply here
+  if stat.epsAnnualGrowth > 1.0 or stat.epsAnnualGrowth <= 0:
+    stat.nextYearPE = None
+    stat.PEGNextAnnual = None
+    return
+  
+  stat.nextYearPE = stat.currentAnnualPE / (1.0 + stat.epsAnnualGrowth)
+  stat.PEGNextAnnual = stat.nextYearPE / stat.epsAnnualGrowth;
+  
+  dividends = cleanDividends([report.dividend for report in reports], quote.previousClose)
+  
+  stat.stdAnnualDividend = numpy.std(dividends)
+  if stat.stdAnnualDividend > 0.05:
+    #if annual dividend vary a lot which means
+    #1.ROA is growing or declining
+    #2.ROA is unstable  
+    x = numpy.arange(0, len(dividends), 1.0)
+    z = numpy.polyfit(x, dividends, 1)
+    #linear fitting shows it is growing
+    
+    if z[0] > 0.1:
+      #use previous dividend as 
+      stat.avgAnnualDividend = dividends[0]
+    else:
+      stat.avgAnnualDividend = numpy.average(dividends)  
+  else:
+    stat.avgAnnualDividend = numpy.average(dividends)
+  
+  stat.estAnnualReturn = stat.avgAnnualDividend / quote.previousClose; 
+  
+  #Overall return consist of two parts
+  #1 Annual Dividend return
+  #2 Annual price growth (assuming PE keeps the same, price growth equal to eps growth)
+  #Only use the first for now
+
+  #Only use equity and liability for now add cash TBD 
+  if not reports[0].curLiab:
+    reports[0].curLiab = 0.0
+    
+  if not reports[0].equity:
+    reports[0].equity = 0.0
+    
+  if not reports[0].curAssets:
+    reports[0].curAssets = 0.0 
+   
+  if reports[0].netIncome:
+    investedCapital = (reports[0].equity + reports[0].curLiab - reports[0].curAssets)
+    if investedCapital > 0:
+      stat.currentAnnualROIC = reports[0].netIncome / investedCapital
+  
+  if stat.currentAnnualROIC is None:
+    print  "stock %s has no ROIC" % stock.symbol
+  
+  stat.avgAnnualROIC = calculateROIC(reports, stat)
+  
+  if reports[0].netIncome and reports[0].assets:
+    stat.currentAnnualROA = reports[0].netIncome / reports[0].assets
+  stat.avgAnnualROA = calculateROA(reports, stat)
+  
+  if quote.marketCapitalization:
+    stat.enterpriseValue = quote.marketCapitalization + reports[0].curLiab - reports[0].curAssets;
+  else:
+    log.warning("No MarketCapitalizaiont found for %s" % stock.symbol)
+    
+  if quote.EBITDA and stat.enterpriseValue:
+    stat.EVtoEBITDA = stat.enterpriseValue / quote.EBITDA
+  
+  return
+
+def UpdateQuarter(stock, quote, stat):
   reports = FinancialReport.objects.filter(symbol=stock.symbol,\
                                          docType='10-Q').\
                                    order_by('-fiscalYear',\
@@ -27,7 +187,7 @@ def quarterPEG(stock, rank, preClose):
         break
     #No historic quarterly EPS data available
     if currentEPS is None or currentEPS == 0.0:
-      log.warn("No quarterly EPS found for %s" % stock.symbol)
+      log.warning("No quarterly EPS found for %s" % stock.symbol)
       return
   else:
     #No Quarterly Reports found for this symbol
@@ -35,139 +195,47 @@ def quarterPEG(stock, rank, preClose):
     log.warning("No Quarterly Report found for %s" % stock.symbol)
     return
   
-  rank.currentQuarterPE = preClose/currentEPS
-  
-  #if eps is negative then pe means nothing use op-income(EBITDA) to replace earning
-  if rank.currentQuarterPE > 0:
-    epsDiluted = [report.epsDiluted for report in reports if report.epsDiluted]
-    diff = numpy.diff(epsDiluted)
-    epsDiluted = epsDiluted[1:]
-    growth = numpy.divide(diff, epsDiluted)
-    #average eps growth rate during last 6 quarters
-    avgGrowth = numpy.average(growth)
-  else:
-    #for those negative stocks has negative EPS or zero EPS
-    #Try use EBIDT to calculate the growth
-    #Usually these kind of company a fast growing companies
-    #Investors are betting on the future otherwise they won't succeed in IPO 
-    EBITDAs = [report.opIncome for report in reports if report.opIncome]
-    diff = numpy.diff(EBITDAs)
-    EBITDAs = EBITDAs[1:]
-    growth = numpy.divide(diff, EBITDAs)
-    #TBD average Growth is not accurate for fast growing company
-    avgGrowth = numpy.average(growth)
+  stat.currentQuarterPE = quote.previousClose / currentEPS
   
   #average
-  rank.epsQuarterGrowth = avgGrowth
-  rank.epsQuarterGrowthStd = numpy.std(growth)
+  (stat.epsQuarterGrowth, stat.epsQuarterGrowthStd) = calculateGrowth(reports, stat)
   #negative growth measn PEG does not apply here
   
   #for those stock has high fluctuation rate, PEG does not apply
-  if rank.epsQuarterGrowthStd > 1.0 or avgGrowth <= 0:
-    rank.nextQuaterPE = None
-    rank.PEGNextQuarter = None
+  if stat.epsQuarterGrowthStd > 1.0 or stat.epsQuarterGrowth <= 0:
+    stat.nextQuaterPE = None
+    stat.PEGNextQuarter = None
     return
-  rank.nextQuaterPE = rank.currentQuarterPE / (1.0 + avgGrowth);
-  rank.PEGNextQuarter = rank.nextQuaterPE / rank.epsQuarterGrowth
-  return
-
-def annualPEG(stock, rank, preClose):          
-  reports = FinancialReport.objects.filter(symbol=stock.symbol,\
-                                          docType='10-K').\
-                                   order_by('-fiscalYear',\
-                                            '-periodFocus')[:5]
-                                            
-  if len(reports) > 0:
-    currentEPS = None
-    for report in reports:
-      if report.epsDiluted is not None:
-        currentEPS = report.epsDiluted
-        break
-    #No historic quarterly EPS data available
-    if currentEPS is None or currentEPS == 0.0:
-      log.warn("No quarterly EPS found for %s" % stock.symbol)
-      return
-  else:
-    #No Annual Report found for this symbol
-    log.warning("No Annual Report found for %s" % stock.symbol)
-    return
+  stat.nextQuaterPE = stat.currentQuarterPE / (1.0 + stat.epsQuarterGrowth);
+  stat.PEGNextQuarter = stat.nextQuaterPE / stat.epsQuarterGrowth
   
-  rank.currentAnnualPE = preClose / currentEPS
-  
-  if rank.currentAnnualPE > 0:
-    epsDiluted = [report.epsDiluted for report in reports if report.epsDiluted]
-    diff = numpy.diff(epsDiluted)
-    epsDiluted = epsDiluted[1:]
-    growth = numpy.divide(diff, epsDiluted)
-    #average eps growth rate during last 5 years
-    avgGrowth = numpy.average(growth)
-  else:
-    #for those negative stocks has negative EPS or zero EPS
-    #Try use EBIDT to calculate the growth
-    #Usually these kind of company a fast growing companies
-    #Investors are betting on the future otherwise they won't succeed in IPO 
-    EBITDAs = [report.opIncome for report in reports if report.opIncome]
-    diff = numpy.diff(EBITDAs)
-    EBITDAs = EBITDAs[1:]
-    growth = numpy.divide(diff, EBITDAs)
-    avgGrowth = numpy.average(growth)
-
-  rank.epsAnnualGrowth = avgGrowth
-  rank.epsAnnualGrowthStd = numpy.std(growth)
-  
-  #for those stock has high fluctuation rate, PEG does not apply
-  #negative growth measn PEG does not apply here
-  if rank.epsAnnualGrowth > 1.0 or avgGrowth <= 0:
-    rank.nextYearPE = None
-    rank.PEGNextAnnual = None
-    return
-  
-  rank.nextYearPE = rank.currentAnnualPE / (1.0 + avgGrowth)
-  rank.PEGNextAnnual = rank.nextYearPE / rank.epsAnnualGrowth;
-  return
-
-def updatePEGRank(stock):
-  quotes = YahooQuotes.objects.filter(symbol=stock.symbol).\
-                               order_by('tradeDate')[:1]
-  if len(quotes) > 0:
-    preClose = None
-    for quote in quotes:
-      if quote.previousClose:
-        preClose = quote.previousClose
-        break
-    if preClose is None:
-      return
-  else:
-    #No Yahoo Quotes found for this symbol
-    log.warning("no Yahoo quotes found for %s" % stock.symbol)
-    return
-
-  try:
-    rank = PEGRank.objects.get(updateTime=date.today(), stock__symbol=stock.symbol)
-  except:
-    print "Creating new PEGRank for %s" % stock.symbol
-    rank = PEGRank(stock=stock)
+  if not reports[0].curLiab:
+    reports[0].curLiab = 0.0
     
-  quarterPEG(stock, rank, preClose)
-  annualPEG(stock, rank, preClose)
+  if not reports[0].equity:
+    reports[0].equity = 0.0
+    
+  if not reports[0].curAssets:
+    reports[0].curAssets = 0.0 
+    
+  if not reports[0].assets:
+    reports[0].assets = 0.0
+   
   
-  #High PE means:
-  #1.Overpriced (high growth estimate or irrational) 
-  #2.earning decline (slow market)
+  if reports[0].netIncome:
+    investedCapital = (reports[0].equity + reports[0].curLiab - reports[0].curAssets)
+    if investedCapital > 0:
+      stat.currentQuarterROIC = reports[0].netIncome / investedCapital
   
-  #low PE means:
-  #1.Underpriced (low growth esitmate or irrational)
-  #2.earning increase (slow market)
+  stat.avgQuarterROIC = calculateROIC(reports, stat)
   
-  rank.rate = 0.0
+  if reports[0].netIncome and reports[0].assets:
+    stat.currentQuarterROA = reports[0].netIncome / reports[0].assets
+  stat.avgQuarterROA = calculateROA(reports, stat)
   
-  if rank.PEGNextAnnual and rank.PEGNextQuarter:
-    rank.rate = (rank.PEGNextAnnual + rank.PEGNextQuarter) / 2.0
-  
-  rank.save()   
-  return 
+  return
 
-def updateDividendRank(stock):
+def UpdateStatistics(stock):
   quotes = YahooQuotes.objects.filter(symbol=stock.symbol).\
                                order_by('tradeDate')[:1]
   if len(quotes) > 0:
@@ -184,48 +252,15 @@ def updateDividendRank(stock):
     return
   
   try:
-    rank = DividendRank.objects.get(updateTime=date.today(), stock__symbol=stock.symbol)
+    stat = Statistics.objects.get(updateTime=date.today(), stock__symbol=stock.symbol)
   except:
-    print "Creating new DividendRank for %s" % stock.symbol
-    rank = DividendRank(stock=stock)
-  
-  reports = FinancialReport.objects.filter(symbol=stock.symbol,\
-                                          docType='10-K').\
-                                   order_by('-fiscalYear',\
-                                            '-periodFocus')[:5]
-                                            
-  if len(reports) == 0:
-    #No Annual Report found for this symbol
-    log.warning("No Annual Report found for %s" % stock.symbol)
-    return
-  
-  dividends = [report.dividend for report in reports]
-  rank.stdAnnualDividend = numpy.std(dividends)
-  if rank.stdAnnualDividend > 0.05:
-    #if annual dividend vary a lot which means
-    #1.ROA is growing or declining
-    #2.ROA is unstable  
-    x = numpy.arange(0, len(dividends), 1.0)
-    z = numpy.polyfit(x, dividends, 1)
-    #linear fitting shows it is growing
+    print "Creating new Statistics for %s" % stock.symbol
+    stat = Statistics(stock=stock)
     
-    if z[0] > 0.1:
-      #use previous dividend as 
-      rank.avgAnnualDividend = dividends[0]
-    else:
-      rank.avgAnnualDividend = numpy.average(dividends)  
-  else:
-    rank.avgAnnualDividend = numpy.average(dividends)
+  UpdateAnnual(stock, quotes[0], stat)
+  UpdateQuarter(stock, quotes[0], stat)
   
-  rank.estAnnualReturn = rank.avgAnnualDividend / quote.previousClose; 
-  
-  #Overall return consist of two parts
-  #1 Annual Dividend return
-  #2 Annual price growth (assuming PE keeps the same, price growth equal to eps growth)
-  #Only use the first for now
-  rank.rate = rank.estAnnualReturn
-  
-  rank.save()
+  stat.save()
   return
 
 if __name__ == "__main__":
@@ -240,6 +275,6 @@ if __name__ == "__main__":
   
   stocks = StockMeta.objects.all()
   for stock in stocks:
-    updatePEGRank(stock)
-    updateDividendRank(stock)
+    UpdateStatistics(stock)
+    
   print "Total Time", time.time() - current
