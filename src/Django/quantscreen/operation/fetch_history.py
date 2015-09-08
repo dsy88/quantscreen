@@ -29,7 +29,12 @@ def download(symbol, start_date):
   params['e'] = time.strftime("%d")
   params['f'] = time.strftime("%Y")
   params['g'] = 'd'
-  content = post(YAHOO_URL, params) 
+  try:
+    content = post(YAHOO_URL, params)
+  except:
+    print "Failed to fetch %s" % symbol
+    return
+     
   content = content.decode('utf-8')
   lines = content.splitlines(True)
   if not os.path.exists('history-' + start_date +'.csv'):

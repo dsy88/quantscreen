@@ -29,7 +29,14 @@ def download(symbols):
                'shortRatio', 'revenue', 'holdingsValue', 'dayValueChange', 'holdingGainPercent', 'annualizedGain',
                'holdingsGain', 'askSize', 'bidSize', 'lastTradeSize', 'averageDailyVolume', 'marketCapitalization',
                'floatShares', 'name', 'sharesOwned', 'stockExchange', 'sharesOutstanding', 'commission', 'oneYearTargetPrice']
-  content = post(YAHOO_URL, params) 
+  
+  while(True): 
+    try:
+      content = post(YAHOO_URL, params)
+      break
+    except:
+      print "Failed to fetch, try again"
+      
   content = content.decode('utf-8')
   if not os.path.exists('yahoo' + time.strftime("-%Y-%m-%d") +'.csv'):
     with open('yahoo' + time.strftime("-%Y-%m-%d") +'.csv', 'w') as f:
