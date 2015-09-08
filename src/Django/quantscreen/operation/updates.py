@@ -48,6 +48,23 @@ def calculateGrowth(reports, stat):
     
   return (avgGrowth, avgGrowthStd)
 
+def calculateRevenueGrowth(reports, stat):
+  if len(reports) < 2:
+    return 0
+  
+  revenues = [report.revenue for report in reports if report.revenue]
+  diff = numpy.diff(revenues)
+  revenues = revenues[1:]
+  growth = numpy.divide(diff, revenues)
+  
+  return numpy.average(growth)
+
+def calculateWACC(reports, stat):
+  return
+
+def calculateFCFF(reports, stat):
+  return
+
 def calculateROIC(reports, stat):
   incomes = [report.netIncome for report in reports if report.netIncome]
   avgNetIncome = numpy.average(incomes)
@@ -71,6 +88,17 @@ def calculateROA(reports, stat):
   avgAssets = numpy.average(assets)
   
   return avgNetIncome / avgAssets
+
+def calculateROE(reports, stat):
+  incomes = [report.netIncome for report in reports if report.netIncome]
+  avgNetIncome = numpy.average(incomes)
+  equitys = [report.equity for report in reports if report.equity]
+  avgEquity = numpy.average(equitys)
+
+  return avgNetIncome / avgEquity 
+
+def calculateDCF(stock, reports, stat, quotes):
+  return
   
 def UpdateAnnual(stock, quote, stat):
   reports = FinancialReport.objects.filter(symbol=stock.symbol,\
@@ -163,6 +191,11 @@ def UpdateAnnual(stock, quote, stat):
     stat.currentAnnualROA = reports[0].netIncome / reports[0].assets
   stat.avgAnnualROA = calculateROA(reports, stat)
   
+  if reports[0].netIncome and reports[0].equity:
+    stat.currentAnnualROE = reports[0].netIncome / reports[0].equity
+    
+  stat.avgAnnualROE = calculateROE(reports, stat)
+  
   if quote.marketCapitalization:
     stat.enterpriseValue = quote.marketCapitalization + reports[0].curLiab - reports[0].curAssets;
   else:
@@ -232,6 +265,12 @@ def UpdateQuarter(stock, quote, stat):
   if reports[0].netIncome and reports[0].assets:
     stat.currentQuarterROA = reports[0].netIncome / reports[0].assets
   stat.avgQuarterROA = calculateROA(reports, stat)
+  
+  if reports[0].netIncome and reports[0].equity:
+    stat.currentQuarterROE = reports[0].netIncome / reports[0].equity
+    
+  stat.avgQuarterROE = calculateROE(reports, stat)
+  
   
   return
 

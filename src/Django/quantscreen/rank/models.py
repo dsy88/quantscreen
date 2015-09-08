@@ -41,15 +41,19 @@ class Statistics(models.Model, JsonMethod):
   #Returns
   currentAnnualROIC = models.FloatField(null=True)
   currentAnnualROA = models.FloatField(null=True)
+  currentAnnualROE = models.FloatField(null=True)
   
   avgAnnualROIC = models.FloatField(null=True)
   avgAnnualROA = models.FloatField(null=True)
+  avgAnnualROE = models.FloatField(null=True)
   
   currentQuarterROIC = models.FloatField(null=True)
   currentQuarterROA = models.FloatField(null=True)
+  currentQuarterROE = models.FloatField(null=True)
   
   avgQuarterROIC = models.FloatField(null=True)
   avgQuarterROA = models.FloatField(null=True)
+  avgQuarterROE = models.FloatField(null=True)
   
   currentAnnualPS = models.FloatField(null=True)
   avgAnnualPS = models.FloatField(null=True)
