@@ -5,6 +5,7 @@ from datetime import datetime
 import urllib, urllib2
 from io import StringIO
 import sys
+import os
 import re
 import time
 from stock.models import *
@@ -32,5 +33,7 @@ if __name__ == "__main__":
   data_path = sys.argv[1]
   
   current = time.time()
-  import_treasuries(data_path)
+  for parent,dirname,filenames in os.walk(data_path):
+    for filename in filenames:  
+      import_treasuries(parent + '/' + filename)
   print "Total Time", time.time() - current

@@ -5,6 +5,7 @@ from io import StringIO
 import sys
 import re
 import time
+import os
 import django
 django.setup()
 from stock.models import StockMeta
@@ -19,18 +20,25 @@ def import_meta(path, market):
     meta = StockMeta()
     meta.symbol = symbol.strip()
     meta.market = market.strip()
-    meta.name = row['Name'].strip()
-    meta.IPOYear = row['IPOyear'].strip()
-    meta.sector = row['Sector'].strip()
-    meta.industry = row['industry'].strip()
-    meta.summaryQuote = row['Summary Quote'].strip()
+    if not pandas.isnull(row['Name']):
+      meta.name = row['Name'].strip()
+    if not pandas.isnull(row['IPOyear']):
+      meta.IPOYear = row['IPOyear']
+    if not pandas.isnull(row['Sector']):
+      meta.sector = row['Sector'].strip()
+    if not pandas.isnull(row['industry']):
+      meta.industry = row['industry'].strip()
+    if not pandas.isnull(row['Summary Quote']):
+      meta.summaryQuote = row['Summary Quote'].strip()
     meta.save()
 
 if __name__ == "__main__":
   django.setup()
   data_path = sys.argv[1]
-  market = sys.argv[2]
   
-  current = time.time()
-  import_meta(data_path, market)
-  print "Total Time", time.time() - current
+  for parent,dirname,filenames in os.walk(data_path):
+    for filename in filenames:
+      market = filename.split('.')[0]
+      current = time.time()
+      import_meta(parent + '/' + filename, market)
+      print "Used %f to import market %s" % (time.time() - current, market)

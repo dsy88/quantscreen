@@ -29,7 +29,6 @@ def expandMillion(val):
   return val
 
 def save(symbol, row):
-  print YahooQuotes.objects.count(), symbol
   quote = YahooQuotes()
   quote.symbol = symbol
   
@@ -56,9 +55,11 @@ if __name__ == "__main__":
   
   current = time.time()
   
-  quotes = pandas.read_csv(data_path)
-  quotes = quotes.set_index('symbol')
-  for s, row in quotes.iterrows():
-    save(s, row)
+  for parent,dirname,filenames in os.walk(data_path):
+    for filename in filenames:  
+      quotes = pandas.read_csv(parent + '/' + filename)
+      quotes = quotes.set_index('symbol')
+      for s, row in quotes.iterrows():
+        save(s, row)
 
   print "Total Time", time.time() - current

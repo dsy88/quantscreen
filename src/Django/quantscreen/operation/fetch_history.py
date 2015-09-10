@@ -39,8 +39,8 @@ def download(symbol, start_date):
   lines = content.splitlines(True)
   if not os.path.exists('history-' + start_date +'.csv'):
     with open('history-' + start_date +'.csv', 'w') as f:
-      f.write('Symbol,')
-      f.write(lines[0])
+      f.write('symbol,')
+      f.write(lines[0].lower())
   with open('history-' + start_date +'.csv', 'a') as f:
     for line in lines[1:]:
       f.write(symbol + ",")
