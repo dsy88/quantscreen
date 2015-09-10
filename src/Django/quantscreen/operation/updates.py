@@ -4,10 +4,10 @@ os.environ["DJANGO_SETTINGS_MODULE"] = "quantscreen.local_settings"
 django.setup()
 from rank.models import Statistics
 from django.utils.decorators import method_decorator
-from stock.models import StockMeta, FinancialReport, YahooQuotes, Treasuries
+from stock.models import StockMeta, FinancialReport, YahooQuotes, Treasuries, YahooHistory
 import logging
 import numpy
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from django.views.decorators.csrf import csrf_exempt
 import time
 
@@ -27,8 +27,9 @@ def calculateGrowth(reports, stat):
   #if eps is negative then pe means nothing use op-income(EBITDA) to replace earning
   if stat.currentAnnualPE > 0:
     epsDiluted = [report.epsDiluted for report in reports if report.epsDiluted]
+    epsDiluted.reverse()
     diff = numpy.diff(epsDiluted)
-    epsDiluted = epsDiluted[1:]
+    epsDiluted = epsDiluted[:-1]
     growth = numpy.divide(diff, epsDiluted)
     #average eps growth rate during last 5 years
 
@@ -38,8 +39,9 @@ def calculateGrowth(reports, stat):
     #Usually these kind of company a fast growing companies
     #Investors are betting on the future otherwise they won't succeed in IPO 
     opIncomes = [report.opIncome for report in reports if report.opIncome]
+    opIncomes.reverse()
     diff = numpy.diff(opIncomes)
-    opIncomes = opIncomes[1:]
+    opIncomes = opIncomes[:-1]
     #TBD average Growth is not accurate for fast growing company
     growth = numpy.divide(diff, opIncomes)
     
@@ -52,9 +54,9 @@ def calculateRevenueGrowth(reports, stat):
   if len(reports) < 2:
     return 0
   
-  revenues = [report.revenue for report in reports if report.revenue]
+  revenues = [report.revenue for report in reports if report.revenue].reverse()
   diff = numpy.diff(revenues)
-  revenues = revenues[1:]
+  revenues = revenues[:-1]
   growth = numpy.divide(diff, revenues)
   
   return numpy.average(growth)
@@ -99,8 +101,36 @@ def calculateROE(reports, stat):
 
 def calculateDCF(stock, reports, stat, quotes):
   return
+
+def calculateDDM(reports, stat, marketReturns):
+  payoutRates = [report.dividend / report.epsDiluted for report in reports \
+                  if report.dividend != 0 and report.epsDiluted != 0]
+  stat.avgPayoutRate = numpy.average(payoutRates)
+  if reports[0].dividend and reports[0].epsDiluted:
+    stat.currentPayoutRate = reports[0].dividend / reports[0].epsDiluted
+  stat.avgRetentionRate = 1.0 - stat.avgPayoutRate
+  stat.DDMExpectedGrowthRate = 1.0 + stat.avgRetentionRate * stat.avgAnnualROE
+  #Assume PayoutRate keeps the same
+  stat.estimateDividend = reports[0].dividend * stat.DDMExpectedGrowthRate
+  stat.DDMPrice = stat.estimateDividend / (stat.requiredReturnRate - stat.DDMExpectedGrowthRate)
+  return
+
+def calculateBeta(stock, stat, marketReturns):
+  start = datetime.now() - timedelta(days=365)
+  historys = YahooHistory.objects.filter(stock__symbol=stock.symbol, date__gt=start).order_by('date')
+  if len(historys) == 0:
+    return
+  close = [history.adjClose for history in historys]
+  diff = numpy.diff(close)
+  close = close[:-1]
+  returns = numpy.divide(diff, close)
+  returns = [rate * 100 for rate in returns]
   
-def UpdateAnnual(stock, quote, stat):
+  cov = numpy.cov(returns, marketReturns)[0][1]
+  
+  return cov / numpy.var(marketReturns)
+  
+def UpdateAnnual(stock, quote, stat, marketReturns):
   reports = FinancialReport.objects.filter(symbol=stock.symbol,\
                                           docType='10-K').\
                                    order_by('-fiscalYear',\
@@ -204,6 +234,9 @@ def UpdateAnnual(stock, quote, stat):
   if quote.EBITDA and stat.enterpriseValue:
     stat.EVtoEBITDA = stat.enterpriseValue / quote.EBITDA
   
+  if stat.beta:
+    calculateDDM(reports, stat, marketReturns)
+  
   return
 
 def UpdateQuarter(stock, quote, stat):
@@ -211,7 +244,7 @@ def UpdateQuarter(stock, quote, stat):
                                          docType='10-Q').\
                                    order_by('-fiscalYear',\
                                             '-periodFocus')[:6]
-                                                                                        
+                                                                
   if len(reports) > 0:
     currentEPS = None
     for report in reports:
@@ -271,10 +304,17 @@ def UpdateQuarter(stock, quote, stat):
     
   stat.avgQuarterROE = calculateROE(reports, stat)
   
-  
   return
 
-def UpdateStatistics(stock):
+def UpdateStatic(stock, marketReturns, stat, riskFreeReturnRate, marketReturnRate):
+  stat.beta = calculateBeta(stock, stat, marketReturns)
+  
+  if stat.beta:
+    stat.requiredReturnRate = riskFreeReturnRate + stat.beta * (marketReturnRate - riskFreeReturnRate)
+
+  return
+
+def UpdateStatistics(stock, marketReturns, riskFreeReturn, marketReturnRate):
   quotes = YahooQuotes.objects.filter(symbol=stock.symbol).\
                                order_by('tradeDate')[:1]
   if len(quotes) > 0:
@@ -296,7 +336,8 @@ def UpdateStatistics(stock):
     print "Creating new Statistics for %s" % stock.symbol
     stat = Statistics(stock=stock)
     
-  UpdateAnnual(stock, quotes[0], stat)
+  UpdateStatic(stock, marketReturns, stat, riskFreeReturn, marketReturnRate)
+  UpdateAnnual(stock, quotes[0], stat, marketReturns)
   UpdateQuarter(stock, quotes[0], stat)
   
   stat.save()
@@ -307,13 +348,22 @@ if __name__ == "__main__":
   
   benchmarkRate = Treasuries.objects.all().order_by('-date')[:1]
   if len(benchmarkRate) > 0:
-    rate = benchmarkRate[0].yields
-    stopPE = 1.0 / rate
+    riskFreeReturnRate = benchmarkRate[0].yields
   else:
     log.warning("no treasuries data found")
+    
+  start = datetime.now() - timedelta(days=365)
+    
+  GSPCHistory = YahooHistory.objects.filter(stock__symbol="^GSPC", date__gt=start).order_by('date')
+  marketReturnRate = (GSPCHistory[0].adjClose - GSPCHistory[len(GSPCHistory)-1].adjClose) / GSPCHistory[len(GSPCHistory)-1].adjClose
+  GSPCClose = [history.adjClose for history in GSPCHistory]
+  GSPCDiff = numpy.diff(GSPCClose)
+  GSPCClose = GSPCClose[:-1]
+  GSPCReturns = numpy.divide(GSPCDiff, GSPCClose) 
+  GSPCReturns = [rate * 100 for rate in GSPCReturns]
   
   stocks = StockMeta.objects.all()
   for stock in stocks:
-    UpdateStatistics(stock)
+    UpdateStatistics(stock, GSPCReturns, riskFreeReturnRate, marketReturnRate)
     
   print "Total Time", time.time() - current
