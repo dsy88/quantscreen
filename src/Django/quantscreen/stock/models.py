@@ -18,8 +18,9 @@ class StockMeta(models.Model, JsonMethod):
   
   updateTime = models.DateTimeField(auto_now_add=True)
   
-  
 class FinancialReport(models.Model):
+  stock = models.ForeignKey(StockMeta, 
+                               related_name='financialReports')
   symbol = models.CharField(max_length=100)
   endDate = models.DateField(null=True)
   amend = models.BooleanField()
@@ -45,6 +46,8 @@ class FinancialReport(models.Model):
   updateTime = models.DateTimeField(auto_now_add=True)
   
 class YahooQuotes(models.Model, JsonMethod):
+  stock = models.ForeignKey(StockMeta, 
+                            related_name='yahooQuotes')
   #Price
   ask = models.FloatField(null=True)
   bid = models.FloatField(null=True)
@@ -105,3 +108,14 @@ class YahooQuotes(models.Model, JsonMethod):
   oneYearTargetPrice = models.FloatField(null=True)
   
   updateTime = models.DateTimeField(auto_now_add=True)
+
+class YahooHistory(models.Model, JsonMethod):
+  stock = models.ForeignKey(StockMeta,
+                            related_name='YahooHistory')
+  date = models.DateField()
+  open = models.FloatField()
+  high = models.FloatField()
+  low = models.FloatField()
+  close = models.FloatField()
+  volume = models.FloatField()
+  adjClose = models.FloatField()

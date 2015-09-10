@@ -5,7 +5,7 @@ from quantscreen.helper import JsonMethod
 
 class Statistics(models.Model, JsonMethod):
   stock = models.ForeignKey(StockMeta, 
-                               related_name='Statistics')
+                               related_name='statistics')
   #Growth and PE
   currentAnnualPE = models.FloatField(null=True)
   currentQuarterPE = models.FloatField(null=True)
@@ -57,10 +57,18 @@ class Statistics(models.Model, JsonMethod):
   
   currentAnnualPS = models.FloatField(null=True)
   avgAnnualPS = models.FloatField(null=True)
-  
-  enterpriseValue = models.FloatField(null=True)
-  
+  enterpriseValue = models.FloatField(null=True)  
   EVtoEBITDA = models.FloatField(null=True)
+  
+  beta = models.FloatField(null=True)
+
+  requiredReturnRate = models.FloatField(null=True)
+  DDMExpectedGrowthRate = models.FloatField(null=True)
+  avgRetentionRate = models.FloatField(null=True)
+  avgPayoutRate = models.FloatField(null=True)
+  currentPayoutRate = models.FloatField(null=True)
+  estimateDividend = models.FloatField(null=True)
+  DDMPrice = models.FloatField(null=True)
   
   updateTime = models.DateField(auto_now_add=True)
 
