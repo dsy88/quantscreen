@@ -104,14 +104,21 @@ def calculateDCF(stock, reports, stat, quotes):
 
 def calculateDDM(reports, stat, marketReturns):
   payoutRates = [report.dividend / report.epsDiluted for report in reports \
-                  if report.dividend != 0 and report.epsDiluted != 0]
+                  if report.dividend and report.epsDiluted]
+  if len(payoutRates) < 3:
+    #Should have a long stable dividend history
+    return
   stat.avgPayoutRate = numpy.average(payoutRates)
+  
+  if not stat.avgPayoutRate:
+    #DDM is not applied here
+    return 
   if reports[0].dividend and reports[0].epsDiluted:
     stat.currentPayoutRate = reports[0].dividend / reports[0].epsDiluted
   stat.avgRetentionRate = 1.0 - stat.avgPayoutRate
-  stat.DDMExpectedGrowthRate = 1.0 + stat.avgRetentionRate * stat.avgAnnualROE
+  stat.DDMExpectedGrowthRate = stat.avgRetentionRate * stat.avgAnnualROE
   #Assume PayoutRate keeps the same
-  stat.estimateDividend = reports[0].dividend * stat.DDMExpectedGrowthRate
+  stat.estimateDividend = reports[0].dividend * (1.0 + stat.DDMExpectedGrowthRate)
   stat.DDMPrice = stat.estimateDividend / (stat.requiredReturnRate - stat.DDMExpectedGrowthRate)
   return
 
@@ -124,10 +131,14 @@ def calculateBeta(stock, stat, marketReturns):
   diff = numpy.diff(close)
   close = close[:-1]
   returns = numpy.divide(diff, close)
-  returns = [rate * 100 for rate in returns]
-  
-  cov = numpy.cov(returns, marketReturns)[0][1]
-  
+  minLen = len(close)
+  if len(marketReturns) < minLen:
+    minLen = len(marketReturns)
+  try:
+    cov = numpy.cov(returns[-minLen:], marketReturns[-minLen:])[0][1]
+  except:
+    print len(returns), stock.symbol
+    return None
   return cov / numpy.var(marketReturns)
   
 def UpdateAnnual(stock, quote, stat, marketReturns):
@@ -360,7 +371,6 @@ if __name__ == "__main__":
   GSPCDiff = numpy.diff(GSPCClose)
   GSPCClose = GSPCClose[:-1]
   GSPCReturns = numpy.divide(GSPCDiff, GSPCClose) 
-  GSPCReturns = [rate * 100 for rate in GSPCReturns]
   
   stocks = StockMeta.objects.all()
   for stock in stocks:
