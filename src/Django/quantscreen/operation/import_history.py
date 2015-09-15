@@ -38,29 +38,31 @@ if __name__ == "__main__":
   
   current = time.time()
   
-  history = pandas.read_csv(data_path)
-  history = history.set_index('symbol')
-  pre = None
-  dates = []
-  total = len(history)
-  count = 0
-  for s, row in history.iterrows():
-    if s != pre:
-      datas = YahooHistory.objects.filter(stock__symbol=s)
-      dates = [data.date.strftime('%Y-%m-%d') for data in datas]    
-      try:
-        stock = StockMeta.objects.get(symbol=s)
-      except Exception as e:
-        print s, "Not Exists"
-        continue
-      pre = s
-    if row['date'] in dates:
-      print s, row['date'], "Exist"
-      continue
-    save(s, stock, row)
-    percent = count * 100.0 / total
-    if count % 10000 == 0:  
-      print percent, "Percent"
-    count += 1
+  for parent,dirname,filenames in os.walk(data_path):
+    for filename in filenames:        
+      history = pandas.read_csv(parent + '/' +  filename)
+      history = history.set_index('symbol')
+      pre = None
+      dates = []
+      total = len(history)
+      count = 0
+      for s, row in history.iterrows():
+        if s != pre:
+          datas = YahooHistory.objects.filter(stock__symbol=s)
+          dates = [data.date.strftime('%Y-%m-%d') for data in datas]    
+          try:
+            stock = StockMeta.objects.get(symbol=s)
+          except Exception as e:
+            print s, "Not Exists"
+            continue
+          pre = s
+        if row['date'] in dates:
+          print s, row['date'], "Exist"
+          continue
+        save(s, stock, row)
+        percent = count * 100.0 / total
+        if count % 10000 == 0:  
+          print percent, "Percent"
+        count += 1
 
   print "Total Time", time.time() - current
