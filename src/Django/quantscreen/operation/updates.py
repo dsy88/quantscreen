@@ -119,7 +119,7 @@ def calculateDDM(reports, stat, marketReturns):
   stat.DDMExpectedGrowthRate = stat.avgRetentionRate * stat.avgAnnualROE
   #Assume PayoutRate keeps the same
   stat.estimateDividend = reports[0].dividend * (1.0 + stat.DDMExpectedGrowthRate)
-  stat.DDMPrice = stat.estimateDividend / (stat.requiredReturnRate - stat.DDMExpectedGrowthRate)
+  stat.DDMPrice = stat.estimateDividend / (stat.equityReturnRate - stat.DDMExpectedGrowthRate)
   return
 
 def calculateBeta(stock, stat, marketReturns):
@@ -174,7 +174,7 @@ def UpdateAnnual(stock, quote, stat, marketReturns):
   
   #for those stock has high fluctuation rate, PEG does not apply
   #negative growth measn PEG does not apply here
-  if stat.epsAnnualGrowth > 1.0 or stat.epsAnnualGrowth <= 0:
+  if stat.epsAnnualGrowthStd > 1.0 or stat.epsAnnualGrowth <= 0:
     stat.nextYearPE = None
     stat.PEGNextAnnual = None
     return
@@ -321,7 +321,7 @@ def UpdateStatic(stock, marketReturns, stat, riskFreeReturnRate, marketReturnRat
   stat.beta = calculateBeta(stock, stat, marketReturns)
   
   if stat.beta:
-    stat.requiredReturnRate = riskFreeReturnRate + stat.beta * (marketReturnRate - riskFreeReturnRate)
+    stat.equityReturnRate = riskFreeReturnRate + stat.beta * (marketReturnRate - riskFreeReturnRate)
 
   return
 
@@ -364,9 +364,20 @@ if __name__ == "__main__":
     log.warning("no treasuries data found")
     
   start = datetime.now() - timedelta(days=365)
+  
+  years = range(1990, 2015)
+  
+  benchmarks = []
+  for year in years:
+    benchmark = YahooHistory.objects.filter(stock__symbol="^GSPC", date__year=year).order_by('date')[0]
+    benchmarks.append(benchmark.adjClose)
+    
+  benchmarkDiffs = numpy.diff(benchmarks)
+  benchmarks = benchmarks[:-1]
+  marketReturns = numpy.divide(benchmarkDiffs, benchmarks)
+  avgMarketReturn = numpy.average(marketReturns)
     
   GSPCHistory = YahooHistory.objects.filter(stock__symbol="^GSPC", date__gt=start).order_by('date')
-  marketReturnRate = (GSPCHistory[0].adjClose - GSPCHistory[len(GSPCHistory)-1].adjClose) / GSPCHistory[len(GSPCHistory)-1].adjClose
   GSPCClose = [history.adjClose for history in GSPCHistory]
   GSPCDiff = numpy.diff(GSPCClose)
   GSPCClose = GSPCClose[:-1]
@@ -374,6 +385,6 @@ if __name__ == "__main__":
   
   stocks = StockMeta.objects.all()
   for stock in stocks:
-    UpdateStatistics(stock, GSPCReturns, riskFreeReturnRate, marketReturnRate)
+    UpdateStatistics(stock, GSPCReturns, riskFreeReturnRate, avgMarketReturn)
     
   print "Total Time", time.time() - current

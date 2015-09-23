@@ -1,7 +1,73 @@
 from django.db import models
-from stock.models import StockMeta
+from stock.models import StockMeta, YahooQuotes, YahooHistory, FinancialReport
 from django.db.models.lookups import StartsWith
 from quantscreen.helper import JsonMethod
+
+class DailyStatistics(models.Model, JsonMethod):
+  stock = models.ForeignKey(StockMeta, 
+                               related_name='dailyStatistics')
+  yahooQuote = models.OneToOneField(YahooQuotes, related_name='dailyStatistics', null=True)
+  yahooHistory = models.OneToOneField(YahooHistory, related_name='dailyStatistics', null=True)
+  
+  beta = models.FloatField(null=True)
+  annualPE = models.FloatField(null=True)
+  quarterPE = models.FloatField(null=True)
+  estimateAnnualPE = models.FloatField(null=True)
+  estimateQuarterPE = models.FloatField(null=True)
+  
+  annualPEG = models.FloatField(null=True)
+  quarterPEG = models.FloatField(null=True)
+  estimateAnnualPEG = models.FloatField(null=True)
+  estimateQuarterPEG = models.FloatField(null=True)
+  
+  date = models.DateField()
+  updateTime = models.DateField(auto_now_add=True)
+  
+class QuarterStatistics(models.Model, JsonMethod):
+  stock = models.ForeignKey(StockMeta, 
+                               related_name='quarterStatistics')
+  report = models.OneToOneField(FinancialReport, related_name='quarterStatistics')
+  
+  periodFocus = models.CharField(max_length=10)
+  fiscalYear = models.CharField(max_length=10)
+  
+  epsGrowth = models.FloatField(null=True)
+  revenueGrowth = models.FloatField(null=True)
+  netIncomeGrowth = models.FloatField(null=True)
+  adjGrowth = models.FloatField(null=True)
+  
+  payoutRate = models.FloatField(null=True)
+  expectedGrowthRate = models.FloatField(null=True)
+  estimateDividend = models.FloatField(null=True)
+  
+  ROE = models.FloatField(null=True)
+  
+  updateTime = models.DateField(auto_now_add=True)
+
+class AnnualStatistics(models.Model, JsonMethod):
+  stock = models.ForeignKey(StockMeta, 
+                               related_name='annualStatistics')
+  report = models.OneToOneField(FinancialReport, related_name='annualStatistics')
+  
+  fiscalYear = models.CharField(max_length=10)
+  epsGrowth = models.FloatField(null=True)
+  revenueGrowth = models.FloatField(null=True)
+  netIncomeGrowth = models.FloatField(null=True)
+  adjGrowth = models.FloatField(null=True)
+  
+  ROIC = models.FloatField(null=True)
+  ROA = models.FloatField(null=True)
+  ROE = models.FloatField(null=True)
+  EV = models.FloatField(null=True)
+  EVtoEBITDA = models.FloatField(null=True)
+  
+  payoutRate = models.FloatField(null=True)
+  expectedGrowthRate = models.FloatField(null=True)
+  estimateDividend = models.FloatField(null=True)
+  
+  updateTime = models.DateField(auto_now_add=True)
+  
+
 
 class Statistics(models.Model, JsonMethod):
   stock = models.ForeignKey(StockMeta, 
@@ -62,7 +128,7 @@ class Statistics(models.Model, JsonMethod):
   
   beta = models.FloatField(null=True)
 
-  requiredReturnRate = models.FloatField(null=True)
+  equityReturnRate = models.FloatField(null=True)
   DDMExpectedGrowthRate = models.FloatField(null=True)
   avgRetentionRate = models.FloatField(null=True)
   avgPayoutRate = models.FloatField(null=True)
@@ -70,8 +136,11 @@ class Statistics(models.Model, JsonMethod):
   estimateDividend = models.FloatField(null=True)
   DDMPrice = models.FloatField(null=True)
   
+  corporateTaxRate = models.FloatField(null=True)
+  debtReturnRate = models.FloatField(null=True)
+  
+  WACC = models.FloatField(null=True)
+  
   updateTime = models.DateField(auto_now_add=True)
 
-
-  
   
