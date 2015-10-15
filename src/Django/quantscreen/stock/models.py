@@ -45,6 +45,17 @@ class FinancialReport(models.Model):
   
   updateTime = models.DateTimeField(auto_now_add=True)
   
+class DividendReport(models.Model, JsonMethod):
+  stock = models.ForeignKey(StockMeta, related_name='dividendReport')
+  
+  dividend = models.FloatField(null=True)
+  declareDate = models.DateField()
+  registrationDate = models.DateField()
+  payDate = models.DateField()
+  
+  reportURL = models.CharField(max_length=1000)
+  updateTime = models.DateTimeField(auto_now_add=True)  
+  
 class YahooQuotes(models.Model, JsonMethod):
   stock = models.ForeignKey(StockMeta, 
                             related_name='yahooQuotes')
